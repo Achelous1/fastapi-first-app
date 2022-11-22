@@ -1,6 +1,10 @@
 from fastapi import FastAPI, Path
+from fastapi.responses import StreamingResponse
 from typing import Union, Optional
 from pydantic import BaseModel
+
+import qrcode
+
 
 app = FastAPI()
 
@@ -27,6 +31,16 @@ class UpdateStudent(BaseModel):
 @app.get("/")
 async def index():
     return {"message": "Ok"}
+
+
+@app.get("/qrcode")
+async def get_qrcode(url: str):
+    img = qrcode.make(url)
+    img.save("qr-code-test.png")
+    def iter_file():
+        with open("./qr-code-test.png", mode="rb") as qrcode:
+            yield from qrcode
+    return StreamingResponse(iter_file(), media_type="image/png")
 
 
 @app.get("/get-student/{student_id}")
