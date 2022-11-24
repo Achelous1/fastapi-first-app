@@ -1,92 +1,60 @@
-from fastapi import FastAPI, Path
-from fastapi.responses import StreamingResponse
-from typing import Union, Optional
-from pydantic import BaseModel
+from fastapi import FastAPI
+from typing import List
+from starlette.middleware.cors import CORSMiddleware
 
-import qrcode
-
+from .db import session
+from .model import User, UserTable
 
 app = FastAPI()
 
-students = {
-    1: {
-        "name": "Jinsu",
-        "age": 33,
-        "class": "year 12"
-    }
-}
-
-class Student(BaseModel):
-    name: str
-    age: int
-    year: str
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-class UpdateStudent(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
-    year: Optional[str] = None
+@app.get("/users")
+def get_user_list():
+    user_list = session.query(UserTable).all()
+    return {"userList" : user_list}
 
 
-@app.get("/")
-async def index():
-    return {"message": "Ok"}
+@app.get("/users/{user_id}")
+def get_user(user_id: int):
+    user = session.query(UserTable).filter(UserTable.id == user_id).first()
+    return user
 
 
-@app.get("/qrcode")
-async def get_qrcode(url: str):
-    img = qrcode.make(url)
-    img.save("qr-code-test.png")
-    def iter_file():
-        with open("./qr-code-test.png", mode="rb") as qrcode:
-            yield from qrcode
-    return StreamingResponse(iter_file(), media_type="image/png")
+@app.post("/users")
+def create_user(name: str, age: int):
+
+    user = UserTable()
+    user.name = name
+    user.age = age
+
+    session.add(user)
+    session.commit()
+
+    return f"{name} created"
 
 
-@app.get("/get-student/{student_id}")
-def get_student(student_id: int = Path(None, description="The ID of the student you want to view", gt=0)):
-    if students.get(student_id):
-        return students[student_id]
-    return {"Error" : "Student not found"}
+@app.put("/users/")
+def update_user(users: List[User]):
+
+    for i in users:
+        user = session.query(UserTable).filter(UserTable.id == i.id).first()
+        user.name = i.name
+        user.age = i.age
+        session.commit()
+        
+    return user
 
 
-@app.get("/get-by-name/{student_id}")
-def get_student(*, student_id: int, name: Optional[str] = None, test:int):
-    for student_id in students:
-        if students[student_id].name == name:
-            return students[student_id]
-    return {"Data": "Not found"}
-
-
-@app.post("/create-student/{student_id}")
-def create_studnet(student_id: int, student: Student):
-    if student_id in students:
-        return {"Error" : "Student exists"}
-
-    students[student_id] = student
-    return students[student_id]
-
-
-@app.put("/update-student/{student_id}")
-def update_student(student_id: int, student: UpdateStudent):
-    if student_id not in students:
-        return {"Error": "Student does not exist"}
-    
-    if student.name:
-        students[student_id].name = student.name
-
-    if student.age:
-        students[student_id].age = student.age
-
-    if student.year:
-        students[student_id].year = student.year
-
-    return students[student_id]
-
-
-@app.delete("/delete-student/{student_id}")
-def delete_student(student_id: int):
-    if student_id not in students:
-        return {"Error": "Student does not exist"}
-    del students[student_id]
-    return {"Message": "Student deleted successfully"}
+@app.delete("/users/{user_id}")
+def delete_user(user_id: int):
+    user = session.query(UserTable).filter(UserTable.id == user_id).delete()
+    session.commit()
+    return "User is deleted"
