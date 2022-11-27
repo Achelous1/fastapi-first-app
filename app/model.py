@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from .db import Base, ENGINE
 
 
@@ -12,5 +12,5 @@ class UserTable(Base):
 
 class User(BaseModel):
     id: int
-    name: str
+    user_name: str = Field(alias="userName")
     age: int

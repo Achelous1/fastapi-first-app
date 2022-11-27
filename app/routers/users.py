@@ -7,7 +7,7 @@ from ..db import session
 
 router = APIRouter(
     prefix="/users",
-    tags=["users"],
+    tags=["사용자"],
     dependencies=[Depends(get_token_header)],
     responses={404: {"description": "Not found"}}
 )
@@ -26,10 +26,10 @@ def get_user(user_id: int):
 
 
 @router.post("/")
-def create_user(name: str, age: int):
+def create_user(user: User):
 
     user = UserTable()
-    user.name = name
+    user.user_name = user_name
     user.age = age
 
     session.add(user)
@@ -43,7 +43,7 @@ def update_user(users: List[User]):
 
     for i in users:
         user = session.query(UserTable).filter(UserTable.id == i.id).first()
-        user.name = i.name
+        user.user_name = i.user_name
         user.age = i.age
         session.commit()
         
@@ -54,4 +54,4 @@ def update_user(users: List[User]):
 def delete_user(user_id: int):
     user = session.query(UserTable).filter(UserTable.id == user_id).delete()
     session.commit()
-    return "User is deleted"
+    return user
